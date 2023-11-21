@@ -1,2 +1,6 @@
 # Test file
 test.py
+
+
+# compiled files
+*.pyc
