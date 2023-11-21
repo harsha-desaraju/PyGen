@@ -11,7 +11,8 @@ class BinaryOptimizer(Optimizer):
         Binary optimizer is optimizing an array of 0's and 1's.
     """
     def __init__(self, n_pop, n_gen, chrom_len, selection_rate=0.5, 
-                elite=0.1, mu=0.05, rnd_state=None, n_jobs = -1
+                elite=0.1, mu=0.05, n_child= 1, rnd_state=None, 
+                n_jobs = -1
         ):
 
         super().__init__(
@@ -20,7 +21,8 @@ class BinaryOptimizer(Optimizer):
             chrom_len = chrom_len, 
             selection_rate=selection_rate, 
             elite = elite, 
-            mu = mu
+            mu = mu,
+            n_child = n_child
         )
 
         self.rnd_state = rnd_state
@@ -64,7 +66,8 @@ class BinaryOptimizer(Optimizer):
 
             # Generate the children by crossing over the parents
             crossover = crossover_scheme(
-                p1, p2, rnd_state = self.rnd_state
+                p1, p2, rnd_state = self.rnd_state,
+                n_child = self.n_child
             )
             children = crossover.mate()
 

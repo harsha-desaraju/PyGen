@@ -1,6 +1,7 @@
 # A file containing all the implementations of crossover functions.
 
 import numpy as np
+from joblib import Parallel, delayed
 
 class Crossover:
     ''' A base class for implementing different crossover methodologies/functions '''
@@ -50,3 +51,58 @@ class UniformCrossover(Crossover):
             child2 = self.p1*gene_mask_comp + self.p2*gene_mask
             childern = np.concatenate([child1, child2])
         return childern
+
+
+
+class KPointCrossover(Crossover):
+    """ 
+        KPointCrossover is a generalization of single/double point crossover.
+        In this method k points are randomly chosen for each pair of parents
+        and genes from each part are selected alternatively to generate children.
+    """
+    def __init__(self, p1, p2, n_child, k=1, rnd_state=None):
+        super().__init__(
+            p1 = p1,
+            p2 = p2, 
+            n_child= n_child
+        )
+
+        assert isinstance(k, int)==True and k<len(p1[0])
+
+        self.chrom_len = len(p1[0])
+        self.k = k          
+        self.R = np.random.RandomState(seed=rnd_state)
+
+    
+    def mate(self):
+        mask = np.empty(self.p1.shape)
+        for ind in range(len(self.p1)):
+            arr = np.arange(self.chrom_len)
+
+            points = self.R.randint(0, self.chrom_len, self.k)
+            points = np.append(points, [0, self.chrom_len])
+            points = np.sort(points)
+
+            a = 0
+            gene_mask = np.zeros(self.chrom_len)
+            for i in range(1, len(points)):
+                gene_mask += np.where(np.logical_and(arr>points[i-1], arr<points[i]), a, 0)
+                a = np.logical_not(a)
+
+            mask[ind] = gene_mask
+
+        mask_comp = np.logical_not(mask)
+
+        if self.n_child == 1:
+            children = self.p1*mask + self.p2*mask_comp
+            return children
+        
+        else:
+            child1 = self.p1*mask + self.p2*mask_comp
+            child2 = self.p1*mask_comp + self.p2*mask
+            return np.concatenate([
+                child1, 
+                child2
+            ])
+
+        
