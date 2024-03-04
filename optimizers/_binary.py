@@ -3,6 +3,7 @@
 import numpy as np
 from joblib import Parallel, delayed
 from ._base import Optimizer
+from tqdm import tqdm
 
 
 
@@ -58,22 +59,24 @@ class BinaryOptimizer(Optimizer):
             # Select 2 sets of parents using the pairing scheme
             pairing = pairing_scheme(
                 self.pop, scores, self.selection_rate, 
-                self.elite, rnd_state = self.rnd_state, 
+                self.elite, self.n_child, rnd_state = self.rnd_state, 
                 **pairing_args
             )
             p1, p2 = pairing.select()
 
 
+
             # Generate the children by crossing over the parents
             crossover = crossover_scheme(
                 p1, p2, rnd_state = self.rnd_state,
+                type = self.__class__.__name__,
                 n_child = self.n_child
             )
             children = crossover.mate()
 
             # Mutate the generated children
             mut_mask = self.R.choice(
-                [0,1], p=(1-self.mu, self.mu), size=(len(p1), self.chrom_len)
+                [0,1], p=(1-self.mu, self.mu), size=(len(p1)*self.n_child, self.chrom_len)
             ).astype(bool)
 
             children = np.where(
@@ -101,3 +104,257 @@ class BinaryOptimizer(Optimizer):
 
 
 
+
+
+
+class ContinuousOptimizer(Optimizer):
+    """ A optimizer for continuous variables """
+    def __init__(self, n_pop, n_gen, chrom_len, bounds, selection_rate=0.5, 
+                elite=0.1, mu=0.05, n_child= 1, rnd_state=None, 
+                n_jobs = -1
+            ):
+        
+        super().__init__(
+            n_pop = n_pop, 
+            n_gen = n_gen, 
+            chrom_len = chrom_len, 
+            selection_rate=selection_rate, 
+            elite = elite, 
+            mu = mu,
+            n_child = n_child
+        )
+
+        self.rnd_state = rnd_state
+        self.n_jobs = n_jobs
+        self.bounds = (
+            np.tile(bounds[0], [self.n_pop, 1]),
+            np.tile(bounds[1], [self.n_pop, 1])
+        )
+
+        self.R = np.random.RandomState(seed=rnd_state)
+
+        self.pop = self.R.uniform(self.bounds[0], self.bounds[1])
+
+        self.bounds = (
+            self.bounds[0][int(self.n_pop*self.elite):],
+            self.bounds[1][int(self.n_pop*self.elite):]
+        )
+
+
+    def optimize(
+            self, cost_function, crossover_scheme,
+            pairing_scheme, crossover_args={}, 
+            pairing_args={}, verbose=True):
+        
+        for gen in range(1, self.n_gen+1):
+            
+            # Calculate the costs in parallel       ------------   ???? see if this can be improved??????
+            parallel = Parallel(n_jobs=self.n_jobs)
+            delay = [
+                delayed(cost_function.cost)(self, chrom) for chrom in self.pop
+            ]
+            scores = parallel(delay)
+            scores = np.array(scores)
+        
+            self.pop = self.pop[scores.argsort()]
+            scores = np.sort(scores)
+
+            if verbose:
+                print(f"Best cost at Generation {gen}: ",scores[0])
+
+            # Select 2 sets of parents using the pairing scheme
+            pairing = pairing_scheme(
+                self.pop, scores, self.selection_rate, 
+                self.elite, self.n_child, rnd_state = self.rnd_state, 
+                **pairing_args
+            )
+            p1, p2 = pairing.select()
+
+
+
+            # Generate the children by crossing over the parents
+            crossover = crossover_scheme(
+                p1, p2, rnd_state = self.rnd_state,
+                type = self.__class__.__name__,
+                n_child = self.n_child,
+                **crossover_args
+            )
+            children = crossover.mate()
+
+            # Mutate the generated children to maintain randomness and to explore
+            # Add or subtract a random from from the gene within its bounds
+            add = (self.bounds[1] - children)*self.R.uniform(
+                0,1,(len(children), self.chrom_len))*self.R.choice([0, 1],
+                p=(1-self.mu/2, self.mu/2), size=(len(children), self.chrom_len))     # ------ why self.mu/2 ????
+            
+            sub = (self.bound[0] - children)*self.R.uniform(
+                0,1, (len(children), self.chrom_len))*self.R.choice([0,1],
+                p=(1-self.mu/2, self.mu/2), size=(len(children), self.chrom_len))
+
+            children = children + add + sub
+
+            # Add the top performing chromozomes to the population
+            children = np.concatenate(
+                [children, self.pop[:int(self.elite*self.n_pop)]]
+            )
+
+            # Children become the population
+            self.pop = children
+
+        # Sort the population
+        parallel = Parallel(n_jobs=self.n_jobs)
+        delay = [delayed(cost_function.cost)(chrom) for chrom in self.pop]
+        scores = parallel(delay)
+        scores = np.array(scores)
+        
+        self.pop = self.pop[scores.argsort()]
+        scores = np.sort(scores)
+
+        return scores, self.pop
+
+import cv2
+def generate_image(chrom, n_bch=1, n_dgf=4):
+    ref_img = cv2.imread("draw/target_small.png", cv2.IMREAD_GRAYSCALE)
+    img = np.zeros(ref_img.shape, dtype=np.uint8)
+
+    for i in range(n_bch):
+        img = cv2.circle(
+            img, 
+            center=(chrom[i*n_dgf+0], chrom[i*n_dgf+1]),
+            radius= chrom[i*n_dgf+2],
+            color=int(chrom[i*n_dgf+3]),
+            thickness=-1
+        )
+
+    return img
+
+
+
+
+
+class DiscreteOptimizer(Optimizer):
+    """ A optimizer for continuous variables """
+    def __init__(self, n_pop, n_gen, chrom_len, bounds, selection_rate=0.5, 
+                elite=0.1, mu=0.05, n_child= 1, rnd_state=None, 
+                n_jobs = None
+            ):
+        
+        super().__init__(
+            n_pop = n_pop, 
+            n_gen = n_gen, 
+            chrom_len = chrom_len, 
+            selection_rate=selection_rate, 
+            elite = elite, 
+            mu = mu,
+            n_child = n_child
+        )
+
+        self.rnd_state = rnd_state
+        self.n_jobs = n_jobs
+        self.bounds = (
+            np.tile(bounds[0], [self.n_pop, 1]),
+            np.tile(bounds[1], [self.n_pop, 1])
+        )
+
+        self.R = np.random.RandomState(seed=rnd_state)
+
+        self.pop = self.R.randint(self.bounds[0], self.bounds[1])
+
+        self.bounds = (
+            self.bounds[0][int(self.n_pop*self.elite):],
+            self.bounds[1][int(self.n_pop*self.elite):]
+        )
+
+
+    def optimize(
+            self, cost_function, crossover_scheme, 
+            pairing_scheme, crossover_args={},
+            pairing_args={}, verbose=True):
+        
+        
+        for gen in tqdm(range(1, self.n_gen+1),disable=True):
+            # print(self.pop)
+            # Calculate the costs in parallel       ------------   ???? see if this can be improved??????
+    
+            if not self.n_jobs is None:
+                parallel = Parallel(n_jobs=self.n_jobs)
+                delay = [
+                    delayed(cost_function.cost)(chrom) for chrom in self.pop
+                ]
+                scores = parallel(delay)
+                scores = np.array(scores).astype(np.float32)
+            else:
+                scores = np.zeros((self.n_pop,))
+                for i in range(self.n_pop):
+                    scores[i] = cost_function.cost(self.pop[i])
+            
+            self.pop = self.pop[scores.argsort()]
+            scores = np.sort(scores)
+
+            if verbose:
+                print(f"Best cost at Generation {gen}: ",scores[0])
+
+            if gen%50 == 0:
+                gen_img = generate_image(self.pop[0])
+                cv2.imshow(f"Image at gen:{gen}", gen_img)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+
+
+            # Select 2 sets of parents using the pairing scheme
+            pairing = pairing_scheme(
+                self.pop, scores, self.selection_rate, 
+                self.elite, self.n_child, rnd_state = self.rnd_state, 
+                **pairing_args
+            )
+            p1, p2 = pairing.select()
+
+
+
+            # Generate the children by crossing over the parents
+            crossover = crossover_scheme(
+                p1, p2, rnd_state = self.rnd_state,
+                type = self.__class__.__name__,
+                n_child = self.n_child,
+            )
+            children = crossover.mate()
+
+            # Mutate the generated children to maintain randomness and to explore
+            # Add or subtract a random from from the gene within its bounds
+            add = (self.bounds[1] - children)*self.R.uniform(
+                0,1,(len(children), self.chrom_len))*self.R.choice([0, 1],
+                p=(1-self.mu/2, self.mu/2), size=(len(children), self.chrom_len))     # ------ why self.mu/2 ????
+            
+            sub = (self.bounds[0] - children)*self.R.uniform(
+                0,1, (len(children), self.chrom_len))*self.R.choice([0,1],
+                p=(1-self.mu/2, self.mu/2), size=(len(children), self.chrom_len))
+
+            children = children + add + sub
+
+            # Add the top performing chromozomes to the population
+            children = np.concatenate(
+                [children, self.pop[:int(self.elite*self.n_pop)]]
+            )
+
+            # Children become the population
+            self.pop = np.round(children).astype(np.int32)
+
+        # Sort the population
+        if not self.n_jobs is None:
+            parallel = Parallel(n_jobs=self.n_jobs)
+            delay = [
+                delayed(cost_function.cost)(chrom) for chrom in self.pop
+            ]
+            scores = parallel(delay)
+            scores = np.array(scores)
+        else:
+            scores = np.zeros((self.n_pop,))
+            for i in range(self.n_pop):
+                scores[i] = cost_function.cost(self.pop[i])
+        
+        self.pop = self.pop[scores.argsort()]
+        scores = np.sort(scores)
+
+        return scores, self.pop
+
+        

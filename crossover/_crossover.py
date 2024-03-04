@@ -10,7 +10,7 @@ class Crossover:
         '''
             p1: parent1
             p2: parent2
-            n_child: number of childern 
+            n_child: number of children 
         '''
         self.p1 = p1
         self.p2 = p2
@@ -33,24 +33,38 @@ class UniformCrossover(Crossover):
         using this method is two, with each child 
         complementary to the other.
     """
-    def __init__(self, p1, p2, n_child=1, rnd_state=None):
+    def __init__(self, p1, p2, type, n_child=1, rnd_state=None):
         super().__init__(p1, p2, n_child)
         self.n_parent = len(p1)
         self.chrom_len = len(p1[0])
+        self.type = type
         self.R = np.random.RandomState(seed=rnd_state)
 
     def mate(self):
-        gene_mask = self.R.randint(0, 2, (self.n_parent, self.chrom_len))
-        gene_mask_comp = np.logical_not(gene_mask).astype(int)
-        
-        if self.n_child == 1:
-            childern = self.p1*gene_mask + self.p2*gene_mask_comp
+        if self.type == 'BinaryOptimizer':
+            gene_mask = self.R.randint(0, 2, (self.n_parent, self.chrom_len))
+            gene_mask_comp = np.logical_not(gene_mask).astype(int)
+            
+            if self.n_child == 1:
+                children = self.p1*gene_mask + self.p2*gene_mask_comp
 
-        else:
-            child1 = self.p1*gene_mask + self.p2*gene_mask_comp
-            child2 = self.p1*gene_mask_comp + self.p2*gene_mask
-            childern = np.concatenate([child1, child2])
-        return childern
+            else:
+                child1 = self.p1*gene_mask + self.p2*gene_mask_comp
+                child2 = self.p1*gene_mask_comp + self.p2*gene_mask
+                children = np.concatenate([child1, child2], axis=0)
+            return children
+        
+        elif self.type == 'ContinuousOptimizer' or self.type == 'DiscreteOptimizer':
+            beta = self.R.uniform(0, 1, (self.n_parent, self.chrom_len))
+
+            if self.n_child == 1:
+                children = beta*(self.p1 - self.p2) + self.p2
+
+            else:
+                child1 = beta*(self.p1 - self.p2) + self.p2
+                child2 = beta*(self.p2 - self.p1) + self.p1
+                children = np.concatenate([child1, child2], axis=0)
+            return children
 
 
 
@@ -60,15 +74,15 @@ class KPointCrossover(Crossover):
         In this method k points are randomly chosen for each pair of parents
         and genes from each part are selected alternatively to generate children.
     """
-    def __init__(self, p1, p2, n_child, k=1, rnd_state=None):
+    def __init__(self, p1, p2, type, n_child, k=1, rnd_state=None):
         super().__init__(
             p1 = p1,
             p2 = p2, 
-            n_child= n_child
+            n_child= n_child,
         )
 
         assert isinstance(k, int)==True and k<len(p1[0])
-
+        self.type = type
         self.chrom_len = len(p1[0])
         self.k = k          
         self.R = np.random.RandomState(seed=rnd_state)
