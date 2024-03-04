@@ -13,7 +13,7 @@ class BinaryOptimizer(Optimizer):
     """
     def __init__(self, n_pop, n_gen, chrom_len, selection_rate=0.5, 
                 elite=0.1, mu=0.05, n_child= 1, rnd_state=None, 
-                n_jobs = -1
+                n_jobs = None
         ):
 
         super().__init__(
@@ -45,7 +45,7 @@ class BinaryOptimizer(Optimizer):
             # Calculate the costs in parallel
             parallel = Parallel(n_jobs=self.n_jobs)
             delay = [
-                delayed(cost_function.cost)(chrom) for chrom in self.pop
+                delayed(cost_function)(chrom) for chrom in self.pop
             ]
             scores = parallel(delay)
             scores = np.array(scores)
@@ -93,7 +93,7 @@ class BinaryOptimizer(Optimizer):
 
         # Sort the population
         parallel = Parallel(n_jobs=self.n_jobs)
-        delay = [delayed(cost_function.cost)(chrom) for chrom in self.pop]
+        delay = [delayed(cost_function)(chrom) for chrom in self.pop]
         scores = parallel(delay)
         scores = np.array(scores)
         
@@ -111,7 +111,7 @@ class ContinuousOptimizer(Optimizer):
     """ A optimizer for continuous variables """
     def __init__(self, n_pop, n_gen, chrom_len, bounds, selection_rate=0.5, 
                 elite=0.1, mu=0.05, n_child= 1, rnd_state=None, 
-                n_jobs = -1
+                n_jobs = None
             ):
         
         super().__init__(
@@ -144,18 +144,22 @@ class ContinuousOptimizer(Optimizer):
     def optimize(
             self, cost_function, crossover_scheme,
             pairing_scheme, crossover_args={}, 
-            pairing_args={}, verbose=True):
+            pairing_args={}, verbose=False, show_progress=True):
         
-        for gen in range(1, self.n_gen+1):
+        for gen in tqdm(range(1, self.n_gen+1), disable=not show_progress):
+
+            if not self.n_jobs is None:
+                parallel = Parallel(n_jobs=self.n_jobs)
+                delay = [
+                    delayed(cost_function)(chrom) for chrom in self.pop
+                ]
+                scores = parallel(delay)
+                scores = np.array(scores).astype(np.float32)
+            else:
+                scores = np.zeros((self.n_pop,))
+                for i in range(self.n_pop):
+                    scores[i] = cost_function(self.pop[i])
             
-            # Calculate the costs in parallel       ------------   ???? see if this can be improved??????
-            parallel = Parallel(n_jobs=self.n_jobs)
-            delay = [
-                delayed(cost_function.cost)(self, chrom) for chrom in self.pop
-            ]
-            scores = parallel(delay)
-            scores = np.array(scores)
-        
             self.pop = self.pop[scores.argsort()]
             scores = np.sort(scores)
 
@@ -187,7 +191,7 @@ class ContinuousOptimizer(Optimizer):
                 0,1,(len(children), self.chrom_len))*self.R.choice([0, 1],
                 p=(1-self.mu/2, self.mu/2), size=(len(children), self.chrom_len))     # ------ why self.mu/2 ????
             
-            sub = (self.bound[0] - children)*self.R.uniform(
+            sub = (self.bounds[0] - children)*self.R.uniform(
                 0,1, (len(children), self.chrom_len))*self.R.choice([0,1],
                 p=(1-self.mu/2, self.mu/2), size=(len(children), self.chrom_len))
 
@@ -203,7 +207,7 @@ class ContinuousOptimizer(Optimizer):
 
         # Sort the population
         parallel = Parallel(n_jobs=self.n_jobs)
-        delay = [delayed(cost_function.cost)(chrom) for chrom in self.pop]
+        delay = [delayed(cost_function)(chrom) for chrom in self.pop]
         scores = parallel(delay)
         scores = np.array(scores)
         
@@ -211,24 +215,6 @@ class ContinuousOptimizer(Optimizer):
         scores = np.sort(scores)
 
         return scores, self.pop
-
-import cv2
-def generate_image(chrom, n_bch=1, n_dgf=4):
-    ref_img = cv2.imread("draw/target_small.png", cv2.IMREAD_GRAYSCALE)
-    img = np.zeros(ref_img.shape, dtype=np.uint8)
-
-    for i in range(n_bch):
-        img = cv2.circle(
-            img, 
-            center=(chrom[i*n_dgf+0], chrom[i*n_dgf+1]),
-            radius= chrom[i*n_dgf+2],
-            color=int(chrom[i*n_dgf+3]),
-            thickness=-1
-        )
-
-    return img
-
-
 
 
 
@@ -269,37 +255,30 @@ class DiscreteOptimizer(Optimizer):
     def optimize(
             self, cost_function, crossover_scheme, 
             pairing_scheme, crossover_args={},
-            pairing_args={}, verbose=True):
+            pairing_args={}, verbose=False, show_progress=True):
         
         
-        for gen in tqdm(range(1, self.n_gen+1),disable=True):
+        for gen in tqdm(range(1, self.n_gen+1),disable=not show_progress):
             # print(self.pop)
             # Calculate the costs in parallel       ------------   ???? see if this can be improved??????
     
             if not self.n_jobs is None:
                 parallel = Parallel(n_jobs=self.n_jobs)
                 delay = [
-                    delayed(cost_function.cost)(chrom) for chrom in self.pop
+                    delayed(cost_function)(chrom) for chrom in self.pop
                 ]
                 scores = parallel(delay)
                 scores = np.array(scores).astype(np.float32)
             else:
                 scores = np.zeros((self.n_pop,))
                 for i in range(self.n_pop):
-                    scores[i] = cost_function.cost(self.pop[i])
+                    scores[i] = cost_function(self.pop[i])
             
             self.pop = self.pop[scores.argsort()]
             scores = np.sort(scores)
 
             if verbose:
                 print(f"Best cost at Generation {gen}: ",scores[0])
-
-            if gen%50 == 0:
-                gen_img = generate_image(self.pop[0])
-                cv2.imshow(f"Image at gen:{gen}", gen_img)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-
 
             # Select 2 sets of parents using the pairing scheme
             pairing = pairing_scheme(
@@ -316,6 +295,7 @@ class DiscreteOptimizer(Optimizer):
                 p1, p2, rnd_state = self.rnd_state,
                 type = self.__class__.__name__,
                 n_child = self.n_child,
+                **crossover_args
             )
             children = crossover.mate()
 
@@ -343,14 +323,14 @@ class DiscreteOptimizer(Optimizer):
         if not self.n_jobs is None:
             parallel = Parallel(n_jobs=self.n_jobs)
             delay = [
-                delayed(cost_function.cost)(chrom) for chrom in self.pop
+                delayed(cost_function)(chrom) for chrom in self.pop
             ]
             scores = parallel(delay)
             scores = np.array(scores)
         else:
             scores = np.zeros((self.n_pop,))
             for i in range(self.n_pop):
-                scores[i] = cost_function.cost(self.pop[i])
+                scores[i] = cost_function(self.pop[i])
         
         self.pop = self.pop[scores.argsort()]
         scores = np.sort(scores)

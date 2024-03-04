@@ -4,3 +4,10 @@ test.py
 
 # compiled files
 *.pyc
+
+
+# gitignore
+.gitignore.txt
+
+# examples folder
+examples

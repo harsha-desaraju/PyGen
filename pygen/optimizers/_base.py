@@ -23,7 +23,7 @@ class Optimizer:
 
         assert n_pop > 1 and isinstance(n_pop, int)
         assert n_gen > 1 and isinstance(n_gen, int)
-        assert chrom_len > 1 and isinstance(chrom_len, int)
+        assert chrom_len >= 1 and isinstance(chrom_len, int)
         assert selection_rate >= 0.0 and selection_rate <= 1.0
         assert elite >= 0.0 and elite <= 1.0
         assert mu >= 0.0 and mu <= 1.0

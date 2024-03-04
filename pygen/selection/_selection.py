@@ -141,7 +141,7 @@ class RouletteWheelSelection(Selection):
         return p1, p2
 
 
-class TounamentSelection(Selection):
+class TournamentSelection(Selection):
     """
         In this method, a subset of chromosomes are randomly selected
         from the population and the chromosome with least cost is
