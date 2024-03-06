@@ -1,5 +1,5 @@
-# PyGen
-A library for optimization using genetic algorithm.
+## PyGen
+An optimization library using genetic algorithm.
 
 This is work in progress. 
 
