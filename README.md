@@ -1,6 +1,36 @@
 ## PyGen
-An optimization library using genetic algorithm.
 
-This is work in progress. 
+PyGen is a Python package for optimization using genetic algorithms. Genetic algorithms are search algorithms inspired by evolution. They are particularly useful for finding solutions to optimization and search problems where the search space is large and complex.
 
-If you would like to use it anyway, go though the example.py file. If you want to write custom crossover functions or pairing functions, then follow the base class to write your own custom functions.
+
+## How Genetic Algorithms Work?
+
+The basic idea of a genetic algorithm is to mimic the process of natural selection. The algorithm starts with a population of candidate solutions (often called individuals or chromosomes). Each candidate solution is represented as a string of binary or real-valued numbers, which encodes a potential solution to the problem.
+
+#### 1) Initialization: 
+The algorithm starts by creating an initial population of candidate solutions. These solutions are randomly generated or initialized based on some heuristic.
+
+#### 2) Evaluation: 
+Each candidate solution in the population is evaluated using a fitness function, which measures how well the solution solves the problem. The fitness function assigns a fitness score to each solution, with higher scores indicating better solutions.
+
+#### 3) Selection: 
+The algorithm selects the best-performing solutions (parents) from the current population based on their fitness scores. These solutions are more likely to be selected as parents for the next generation.
+
+#### 4) Crossover: 
+The selected parents are combined to create new offspring (children). This is done by exchanging genetic material (genes or parameters) between parents to create new candidate solutions. Crossover helps explore the search space and combine good solutions from different parents.
+
+#### 5) Mutation: 
+To maintain genetic diversity in the population and prevent premature convergence, some of the offspring undergo random changes (mutations) in their genetic material. Mutation introduces new genetic material into the population and helps explore new regions of the search space.
+
+#### 6) Replacement: 
+The offspring replace some of the least fit members of the current population. This ensures that the population size remains constant and that only the best solutions survive to the next generation.
+
+#### 7) Termination: 
+The algorithm terminates when a stopping criterion is met, such as reaching a maximum number of generations or finding a satisfactory solution.
+
+## Why PyGen?
+
+I have been fascinated by genetic algorithms since I first learned about them. I have used them in many problems, but my passion for genetic algorithms has remained strong. So, I decided to write a package from scratch, which will give me an opportunity to learn more about them and contribute to the open-source community.
+## Getting Started
+
+PyGen is a package still in development. There is a still a lot of functionality to add (See contributing). 
