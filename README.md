@@ -33,7 +33,7 @@ Throughout the development process, speed has been a primary focus. To optimize 
 
 ## Getting Started
 
-PyGen is a package still in development. There is a still a lot of functionality to add. But it can still be used. To start using it, place the `pygen` directory in the current working directory and import. One can also add a python path variable to use. Refer to the files in [documentation](https://github.com/harsha-desaraju/PyGen?tab=readme-ov-file#documentation) examples to understand better.
+PyGen is a package still in development. There is a still a lot of functionality to add. But it can still be used. To start using it, place the `pygen` directory in the current working directory and import. One can also add a python path variable to use. Refer to the `example.py` file and the [documentation](https://github.com/harsha-desaraju/PyGen?tab=readme-ov-file#documentation) to understand better.
 ## Contributing
 
 Contributions are always welcome!
