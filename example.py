@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # The lower and upper to search
     # Here lets find an optimum
     # between [-10, 10]
-    bnds = (np.array([2]), np.array([3]))
+    bnds = (np.array([-5]), np.array([5]))
     # The len of chromosome. Since there is 
     # only 1 variable its one here
     chrom_len = 1
