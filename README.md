@@ -23,7 +23,7 @@ The basic idea of a genetic algorithm is to mimic the process of natural selecti
 
 ## Why PyGen?
 
-I have been fascinated by genetic algorithms since I first learned about them. I have used them in many problems, but my enthusiasm for genetic algorithms has only grown. So, I decided to write a package from scratch, providing me with an opportunity to deepen my understanding of them and contribute to the open-source community.
+I have been fascinated by genetic algorithms since I first learned about them. I have used them in many problems, but my enthusiasm for genetic algorithms has only grown. So, I decided to write a package from scratch, providing me with an opportunity to deepen my understanding and contribute to the open-source community.
 
 
 Throughout the development process, speed has been a primary focus. To optimize performance, I've extensively vectorized the code and incorporated parallelization when evaluating populations. However, as we're aware, parallelization introduces overhead. Therefore, users have the flexibility to enable or disable parallelization based on the specific requirements of their problem, aiming to enhance the overall program's runtime.
