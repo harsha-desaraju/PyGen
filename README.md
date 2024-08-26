@@ -17,7 +17,7 @@ The basic idea of a genetic algorithm is to mimic the process of natural selecti
 
 **5. Mutation:** To maintain genetic diversity in the population and prevent premature convergence, some of the offspring undergo random changes (mutations) in their genetic material. Mutation introduces new genetic material into the population and helps explore new regions of the search space.
 
-**6. Replacement:** The offspring replace some of the least fit members of the current population. This ensures that the population size remains constant and that only the best solutions survive to the next generation.
+**6. Replacement:** The offsprings replace some of the least fit members of the current population. This ensures that the population size remains constant and that only the best solutions survive to the next generation.
 
 **7. Termination:** The algorithm terminates when a stopping criterion is met, such as reaching a maximum number of generations or finding a satisfactory solution.
 
